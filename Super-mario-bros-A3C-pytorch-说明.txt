@@ -1,0 +1,27 @@
+﻿1. python依赖安装
+conda install scikit-image pandas
+pip install opencv-python
+pip install gym
+pip install gym-super-mario-bros
+
+2. 问题解决
+  A. 运行gym-super-mario-bros遇到如下报错：
+        Traceback (most recent call last):
+        File "1_sb_ppo_agent.py", line 10, in <module>
+        from nes_py.wrappers import BinarySpaceToDiscreteSpaceEnv
+        ImportError: cannot import name 'BinarySpaceToDiscreteSpaceEnv' from 'nes_py.wrappers' (C:\Users\Anaconda3\lib\site-packages\nes_py\wrappers\__init__.py)
+     修改如下：
+        from nes_py.wrappers import JoypadSpace
+        env = JoypadSpace(env, actions)
+
+  B. Popen问题：Windows的Popen需要加上shell参数
+        if platform == 'win32':
+            self.pipe = sp.Popen(self.command, stdin=sp.PIPE, stderr=sp.PIPE, shell=True)
+        else:
+            self.pipe = sp.Popen(self.command, stdin=sp.PIPE, stderr=sp.PIPE)
+
+  C. Windows下不能使用Popen的stdin.write，代码改为：
+        if platform == 'win32':
+            pass
+        else:
+            self.pipe.stdin.write(data)  

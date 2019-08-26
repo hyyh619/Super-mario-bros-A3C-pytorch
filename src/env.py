@@ -5,11 +5,16 @@
 import gym_super_mario_bros
 from gym.spaces import Box
 from gym import Wrapper
-from nes_py.wrappers import BinarySpaceToDiscreteSpaceEnv
+#from nes_py.wrappers import BinarySpaceToDiscreteSpaceEnv
+from nes_py.wrappers import JoypadSpace
 from gym_super_mario_bros.actions import SIMPLE_MOVEMENT, COMPLEX_MOVEMENT, RIGHT_ONLY
 import cv2
 import numpy as np
 import subprocess as sp
+import sys
+
+# Windows：win32, Mac: darwin, Linux: linux
+platform = sys.platform
 
 
 class Monitor:
@@ -18,12 +23,27 @@ class Monitor:
         self.command = ["ffmpeg", "-y", "-f", "rawvideo", "-vcodec", "rawvideo", "-s", "{}X{}".format(width, height),
                         "-pix_fmt", "rgb24", "-r", "80", "-i", "-", "-an", "-vcodec", "mpeg4", saved_path]
         try:
-            self.pipe = sp.Popen(self.command, stdin=sp.PIPE, stderr=sp.PIPE)
+            if platform == 'win32':
+                self.pipe = sp.Popen(self.command, stdin=sp.PIPE, stderr=sp.PIPE, shell=True)
+            else:
+                self.pipe = sp.Popen(self.command, stdin=sp.PIPE, stderr=sp.PIPE)
         except FileNotFoundError:
+            print("There is error.")
             pass
 
     def record(self, image_array):
-        self.pipe.stdin.write(image_array.tostring())
+        data = image_array.tostring() # orig: image_array.tostring()
+        # dataLen = len(data)
+        # idx = 0
+        # while idx < dataLen:
+        #     batchSize = min(dataLen - idx, 1 << 10)
+        #     print("writing bytes [%s, %s)... \n" % (idx, idx + batchSize), end="", flush=True)
+        #     self.pipe.stdin.write(data[idx:idx + batchSize])
+        #     idx += batchSize
+        if platform == 'win32':
+            pass
+        else:
+            self.pipe.stdin.write(data)
 
 
 def process_frame(frame):
@@ -96,13 +116,16 @@ def create_train_env(world, stage, action_type, output_path=None):
         monitor = Monitor(256, 240, output_path)
     else:
         monitor = None
+
     if action_type == "right":
         actions = RIGHT_ONLY
     elif action_type == "simple":
         actions = SIMPLE_MOVEMENT
     else:
         actions = COMPLEX_MOVEMENT
-    env = BinarySpaceToDiscreteSpaceEnv(env, actions)
+
+    #env = BinarySpaceToDiscreteSpaceEnv(env, actions)
+    env = JoypadSpace(env, actions)
     env = CustomReward(env, monitor)
     env = CustomSkipFrame(env)
     return env, env.observation_space.shape[0], len(actions)
